@@ -8,8 +8,12 @@ import torch
 
 
 class CountVectorizer(BaseEstimator, TransformerMixin):
+    """PyTorch 対応の CountVectorizer"""
     def __init__(self):
         self._count_vectorizer = CountVectorizer_()  # (*args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._count_vectorizer, name)
 
     def fit(self, texts):
         return self._count_vectorizer.fit(texts)
