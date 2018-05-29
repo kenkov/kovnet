@@ -99,8 +99,8 @@ class IDVectorizer(BaseEstimator, TransformerMixin):
         count_vectorizer.fit(texts)
 
         # 語彙に <unk>, <pad>, <s>, </s> を追加する
-        default_vocabulary = {"<unk>": 0,
-                              "<pad>": 1,
+        default_vocabulary = {"<pad>": 0,
+                              "<unk>": 1,
                               "<s>":   2,
                               "</s>":  3}
         fitted_vocab = count_vectorizer.vocabulary_
@@ -112,8 +112,6 @@ class IDVectorizer(BaseEstimator, TransformerMixin):
             if key not in default_vocabulary:
                 vocabulary[key] = start_idx
                 start_idx += 1
-
-        print(vocabulary)
 
         # 語彙を更新した count vectorizer を作成
         self.count_vectorizer_ = CountVectorizer_(vocabulary=vocabulary,
@@ -158,11 +156,3 @@ class IDVectorizer(BaseEstimator, TransformerMixin):
             return in_vec
         
         return in_vec.t()
-
-
-if __name__ == "__main__":
-    vec = IDVectorizer(max_features=3)
-    res = vec.fit(["今日 は 疲れた", "明日 は 晴れる"])
-    res = vec.transform(["<s> 明後日 は 晴れる </s>", "<s> 今日 元気 </s>"],
-                        max_len=10)
-    print(res)
