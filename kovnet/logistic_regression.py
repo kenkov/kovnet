@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from sklearn.feature_extraction.text import CountVectorizer
+from kovnet.vectorizer import CountVectorizer
 from sklearn.preprocessing import LabelEncoder
 
 
@@ -30,7 +30,7 @@ def execute():
     label_encoder = LabelEncoder()
     label_encoder.fit(labels)
 
-    num_features = len(transformer.vocabulary_)
+    num_features = len(transformer.vocabulary)
     num_labels = len(label_encoder.classes_)
 
     print(num_features)
@@ -43,20 +43,13 @@ def execute():
     print("num_parameters: {}".format([param.shape for param
                                        in model.parameters()]))
 
-    # # test forward
-    # with torch.no_grad():
-    #     vec = torch.tensor(transformer.transform(texts).toarray(), dtype=torch.float32)
-    #     print(model(vec))
-
     for epoch in range(1):
         for i in range(len(texts)):
             model.zero_grad()
 
             input_ = [texts[i]]
             output_ = [labels[i]]
-            # print("HERE", torch.tensor(transformer.transform(["今日"]).toarray()))
-            in_vec = torch.tensor(transformer.transform(input_).toarray(), 
-                                  dtype=torch.float32)
+            in_vec = transformer.transform(input_)
             out_vec = torch.tensor(label_encoder.transform(output_))
             res = model.forward(in_vec)
             loss = loss_function(res, out_vec)
