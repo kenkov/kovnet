@@ -17,7 +17,7 @@ class LogisticRegression(nn.Module):
         self.linear = nn.Linear(num_features, num_labels)
 
     def forward(self, vec):
-        return F.softmax(self.linear(vec), dim=1)
+        return self.linear(vec)
 
 
 def execute():
@@ -37,23 +37,30 @@ def execute():
     print(num_labels)
 
     model = LogisticRegression(num_features, num_labels)
-    loss_function = nn.NLLLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.1)
+    loss_function = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters())
 
     print("num_parameters: {}".format([param.shape for param
                                        in model.parameters()]))
+    
+    batch_size = 2
+    num_samples = len(texts)
 
-    for epoch in range(1):
-        for i in range(len(texts)):
+    X = transformer.transform(texts)
+    y = torch.tensor(label_encoder.transform(labels))
+
+    for epoch in range(1000):
+        shuffled_nums = torch.randperm(num_samples)
+        for i in range(0, num_samples, batch_size):
+            input_ = X[shuffled_nums[i:i+batch_size]]
+            output_ = y[shuffled_nums[i:i+batch_size]]
+
             model.zero_grad()
 
-            input_ = [texts[i]]
-            output_ = [labels[i]]
-            in_vec = transformer.transform(input_)
-            out_vec = torch.tensor(label_encoder.transform(output_))
-            res = model.forward(in_vec)
-            loss = loss_function(res, out_vec)
-            print(in_vec, out_vec, res, loss)
+            res = model.forward(input_)
+            loss = loss_function(res, output_)
+            # print(input_, output_, res, loss)
+            print(res, output_, loss)
 
             loss.backward()
             optimizer.step()

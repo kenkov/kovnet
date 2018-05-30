@@ -3,14 +3,17 @@
 
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.feature_extraction.text import CountVectorizer as CountVectorizer_
-from sklearn.preprocessing import LabelEncoder
 import torch
+
+
+def space_tokenizer(text):
+    return text.split(" ")
 
 
 class CountVectorizer(BaseEstimator, TransformerMixin):
     """PyTorch 対応の CountVectorizer"""
     def __init__(self,
-                 tokenizer=lambda x: x.split(" "),
+                 tokenizer=space_tokenizer,
                  ngram_range=(1, 1),
                  stop_words=None,
                  lowercase=False,
@@ -69,7 +72,7 @@ class CountVectorizer(BaseEstimator, TransformerMixin):
 
 class IDVectorizer(BaseEstimator, TransformerMixin):
     def __init__(self,
-                 tokenizer=lambda x: x.split(" "),
+                 tokenizer=space_tokenizer,
                  ngram_range=(1, 1),
                  stop_words=None,
                  lowercase=False,
@@ -135,7 +138,7 @@ class IDVectorizer(BaseEstimator, TransformerMixin):
                     [ 6,  0],
                     [ 1,  1],
                     [ 1,  1],
-                    [ 1,  1]], dtype=torch.int32)
+                    [ 1,  1]], dtype=torch.long)
         """
         # oen-hot encoding した numpy array を作成する
         tokenizer = self.count_vectorizer_.build_tokenizer()
@@ -150,7 +153,7 @@ class IDVectorizer(BaseEstimator, TransformerMixin):
         vec = [[word2id.get(word, word2id["<unk>"])
                 for word in tokenize(text)]
                for text in texts]
-        in_vec = torch.tensor(vec, dtype=torch.int32)
+        in_vec = torch.tensor(vec, dtype=torch.long)
 
         if batch_first:
             return in_vec
