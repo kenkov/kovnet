@@ -75,7 +75,5 @@ if __name__ == "__main__":
                 loss.backward()
                 optimizer.step()
                 print("Target: {}, loss: {}".format(target_, loss))
-                # print(input_)
-                # print(output_)
-                # print(res)
+
     print(vectorizer.vocabulary)
