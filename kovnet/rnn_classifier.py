@@ -7,8 +7,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from kovnet.vectorizer import IDVectorizer
+from kovnet.utils import sort_by_length
 from sklearn.preprocessing import LabelEncoder
-import numpy as np
 
 
 class RNNClassifier(nn.Module):
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     label_encoder.fit(labels)
 
     # params
-    batch_size = 2
+    batch_size = 3
     vocab_size = len(vectorizer.vocabulary)
     embedding_dim = 100
     hidden_dim = embedding_dim
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     loss_function = nn.CrossEntropyLoss(ignore_index=0)
     optimizer = optim.Adam(model.parameters())
 
-    for epoch in range(100):
+    for epoch in range(1000):
         batch_perm = torch.randperm(num_samples)
         for batch_idx in range(0, num_samples, batch_size):
             # initialize grad
@@ -74,12 +74,10 @@ if __name__ == "__main__":
             # prepare samples
             idxes = batch_perm[batch_idx:batch_idx+batch_size]
             samples = [texts[i] for i in idxes]
+            targets = [labels[i] for i in idxes]
             lengths = [len(sample.split(" ")) for sample in samples]
             # 長さで降順ソートする
-            sorted_idx = np.argsort(lengths)[::-1]
-            samples = [samples[i] for i in sorted_idx]
-            targets = [labels[i] for i in sorted_idx]
-            lengths = [lengths[i] for i in sorted_idx]
+            lengths, samples, targets = sort_by_length(lengths, samples, targets)
 
             # Tensor に変換
             X = vectorizer.transform(samples)
@@ -90,6 +88,11 @@ if __name__ == "__main__":
             out = model.forward(X, lengths)
             loss = loss_function(out, y)
             print("Epoch: {}, loss: {:.6f}".format(epoch, loss.item()))
+            print("> {}\n= {}\n< {}".format(
+                samples[-1],
+                targets[-1],
+                label_encoder.classes_[out[-1].topk(1)[1].item()],
+                ))
 
             # backward
             loss.backward()
