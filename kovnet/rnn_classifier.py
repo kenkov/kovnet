@@ -81,6 +81,7 @@ if __name__ == "__main__":
             targets = [labels[i] for i in sorted_idx]
             lengths = [lengths[i] for i in sorted_idx]
 
+            # Tensor に変換
             X = vectorizer.transform(samples)
             y = torch.tensor(label_encoder.transform(targets))
             lengths = torch.tensor(lengths)
@@ -88,7 +89,7 @@ if __name__ == "__main__":
             # forward
             out = model.forward(X, lengths)
             loss = loss_function(out, y)
-            print("Epoch: {}, loss: {}".format(epoch, loss.item()))
+            print("Epoch: {}, loss: {:.6f}".format(epoch, loss.item()))
 
             # backward
             loss.backward()
