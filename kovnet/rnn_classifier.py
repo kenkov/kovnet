@@ -8,6 +8,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from kovnet.vectorizer import IDVectorizer
 from sklearn.preprocessing import LabelEncoder
+import numpy as np
 
 
 class RNNClassifier(nn.Module):
@@ -16,7 +17,7 @@ class RNNClassifier(nn.Module):
         super(self.__class__, self).__init__()
         self.embedding = nn.Embedding(vocab_size, embedding_dim,
                                       padding_idx=0)
-        self.rnn = nn.RNN(embedding_dim, hidden_dim, 1,
+        self.rnn = nn.GRU(embedding_dim, hidden_dim, 1,
                           dropout=0)
         self.out_lin = nn.Linear(hidden_dim, label_size)
 
@@ -28,10 +29,6 @@ class RNNClassifier(nn.Module):
         rnn_out_, rnn_hidden = self.rnn(x)
         rnn_out, _ = nn.utils.rnn.pad_packed_sequence(rnn_out_)
 
-        print(rnn_out.shape)
-        print([idx.item()-1 for idx in lengths])
-        print(list(range(vec.shape[0])))
-
         rnn_out_final = rnn_out[[idx.item()-1 for idx in lengths],
                                 range(vec.shape[1])]
 
@@ -41,36 +38,58 @@ class RNNClassifier(nn.Module):
 
 
 if __name__ == "__main__":
-    texts = ["今日 は 疲れ た ので 帰っ て 来 た",
-             "今日 は 雨 だ",
+    texts = ["今日 は 疲れ た の もう 帰 ろう",
+             "今日 は 雨 らしい ね",
              "明日 は どうなる だろう"]
+    labels = ["a", "b", "c"]
     num_samples = len(texts)
 
     # fit vectorizer
     vectorizer = IDVectorizer()
     vectorizer.fit(texts)
 
+    # fit labels
+    label_encoder = LabelEncoder()
+    label_encoder.fit(labels)
+
     # params
     batch_size = 2
     vocab_size = len(vectorizer.vocabulary)
     embedding_dim = 100
     hidden_dim = embedding_dim
-    label_size = vocab_size
+    label_size = len(label_encoder.classes_)
+    print(label_encoder.classes_)
 
     # model
     model = RNNClassifier(vocab_size, embedding_dim, hidden_dim, label_size)
     loss_function = nn.CrossEntropyLoss(ignore_index=0)
     optimizer = optim.Adam(model.parameters())
 
-    for epoch in range(1):
+    for epoch in range(100):
         batch_perm = torch.randperm(num_samples)
         for batch_idx in range(0, num_samples, batch_size):
-            samples = [texts[i] for i in
-                       batch_perm[batch_idx:batch_idx+batch_size]]
+            # initialize grad
+            model.zero_grad()
+
+            # prepare samples
+            idxes = batch_perm[batch_idx:batch_idx+batch_size]
+            samples = [texts[i] for i in idxes]
+            lengths = [len(sample.split(" ")) for sample in samples]
+            # 長さで降順ソートする
+            sorted_idx = np.argsort(lengths)[::-1]
+            samples = [samples[i] for i in sorted_idx]
+            targets = [labels[i] for i in sorted_idx]
+            lengths = [lengths[i] for i in sorted_idx]
+
             X = vectorizer.transform(samples)
-            lengths = torch.tensor([len(sample.split(" "))
-                                    for sample in samples])
-            print(X)
-            print(lengths)
+            y = torch.tensor(label_encoder.transform(targets))
+            lengths = torch.tensor(lengths)
+
+            # forward
             out = model.forward(X, lengths)
-            print(out)
+            loss = loss_function(out, y)
+            print("Epoch: {}, loss: {}".format(epoch, loss.item()))
+
+            # backward
+            loss.backward()
+            optimizer.step()
