@@ -34,10 +34,9 @@ class RNNClassifier(nn.Module):
 
 
 if __name__ == "__main__":
-    texts = ["今日 は 疲れ た の もう 帰 ろう",
-             "今日 は 雨 らしい ね",
-             "明日 は どうなる だろう"]
-    labels = ["a", "b", "c"]
+    texts = ["明日 は 晴れる", "今日 は 暑い です", "疲れ た ので 早く に 帰り たい です"]
+    labels = [1, 0, 0]
+
     num_samples = len(texts)
 
     # fit vectorizer
@@ -49,20 +48,25 @@ if __name__ == "__main__":
     label_encoder.fit(labels)
 
     # params
-    batch_size = 3
+    batch_size = 20
     vocab_size = len(vectorizer.vocabulary)
-    embedding_dim = 100
+    embedding_dim = 64
     hidden_dim = embedding_dim
     label_size = len(label_encoder.classes_)
+
+    print("Samples: {}".format(num_samples))
+    print("vocab_size: {}, label_size: {}".format(vocab_size, label_size))
     print(label_encoder.classes_)
 
     # model
     model = RNNClassifier(vocab_size, embedding_dim, hidden_dim, label_size)
-    loss_function = nn.CrossEntropyLoss(ignore_index=0)
+    # ignore_idx は指定しない
+    loss_function = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters())
 
     for epoch in range(100):
         batch_perm = torch.randperm(num_samples)
+        epoch_loss = 0
         for batch_idx in range(0, num_samples, batch_size):
             # initialize grad
             model.zero_grad()
@@ -73,7 +77,9 @@ if __name__ == "__main__":
             targets = [labels[i] for i in idxes]
             lengths = [len(sample.split(" ")) for sample in samples]
             # 長さで降順ソートする
-            lengths, samples, targets = sort_by_length(lengths, samples, targets)
+            lengths, samples, targets = sort_by_length(lengths,
+                                                       samples,
+                                                       targets)
 
             # Tensor に変換
             X = vectorizer.transform(samples)
@@ -89,10 +95,12 @@ if __name__ == "__main__":
             optimizer.step()
 
             # log
-            print("Epoch: {}, loss: {:.6f}".format(epoch, loss.item()))
-            sample_idx = random.choice(range(X.shape[1]))
-            print("> {}\n= {}\n< {}".format(
-                samples[sample_idx],
-                targets[sample_idx],
-                label_encoder.classes_[out[sample_idx].topk(1)[1].item()],
-                ))
+            epoch_loss += loss.item()
+            # print("Epoch: {}, loss: {:.6f}".format(epoch, loss.item()))
+            # sample_idx = random.choice(range(X.shape[1]))
+            # print("> {}\n= {}\n< {}".format(
+            #     samples[sample_idx],
+            #     targets[sample_idx],
+            #     label_encoder.classes_[out[sample_idx].topk(1)[1].item()],
+            #     ))
+        print("Epoch: {}, loss: {}".format(epoch, epoch_loss))
