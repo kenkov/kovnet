@@ -121,7 +121,7 @@ class IDVectorizer(BaseEstimator, TransformerMixin):
                                                   **self._params)
         return self
 
-    def transform(self, texts, max_len=20, batch_first=False):
+    def transform(self, texts, max_len=None, batch_first=False):
         """
         Arg:
             texts (List[str]): 文字列のリスト。
@@ -148,6 +148,14 @@ class IDVectorizer(BaseEstimator, TransformerMixin):
             tokens = tokenizer(text)
             tokens = tokens[:max_len] + ["<pad>"] * (max_len - len(tokens))
             return tokens
+
+        # max_len==None の場合、入力文字列の最長を max_len にセットする
+        if not max_len:
+            max_len = -1
+            for _text in texts:
+                _len = len(tokenizer(_text))
+                if _len > max_len:
+                    max_len = _len
 
         # ベクトル化
         vec = [[word2id.get(word, word2id["<unk>"])
