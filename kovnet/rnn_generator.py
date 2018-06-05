@@ -36,10 +36,20 @@ class RNNGenerator(nn.Module):
         return out
 
 
+def idx2words(idxes, vocab):
+    id2word = {key: word for word, key in vocab.items()}
+    return [id2word[idx.item()] for idx in idxes]
+
+
+def proba2words(proba, vocab):
+    idxes = torch.topk(proba, 1, dim=1)[1]
+    return idx2words(idxes, vocab)
+
+
 if __name__ == "__main__":
-    texts = ["今日 は 寒い",
-             "今日 は 寒い です",
-             "明日 は 暑い",
+    texts = ["今日 は 寒い </s>",
+             "今日 は 寒い です </s>",
+             "明日 は 暑い </s>",
              ]
     num_samples = len(texts)
 
@@ -51,6 +61,7 @@ if __name__ == "__main__":
     embedding_dim = 128
     hidden_dim = 128
     vocab_size = len(vectorizer.vocabulary)
+    print_every = 50
 
     # model
     model = RNNGenerator(vocab_size, embedding_dim, hidden_dim)
@@ -59,6 +70,7 @@ if __name__ == "__main__":
 
     for epoch in range(1000):
         shuffled_idx = torch.randperm(num_samples)
+        epoch_loss = 0
         for batch_idx in range(0, num_samples, batch_size):
             # initialize grad
             model.zero_grad()
@@ -86,4 +98,15 @@ if __name__ == "__main__":
             optimizer.step()
 
             # log
-            print("Epoch: {}, loss: {}".format(epoch, loss))
+            epoch_loss += loss.item()
+            if batch_idx % print_every == 0:
+                print("Epoch: {}, batch: {}, loss: {}".format(epoch, batch_idx, loss))
+                sample_idx = random.choice(range(X.shape[1]))
+                in_ = X[:, sample_idx]
+                gold_ = y[:, sample_idx]
+                out_ = out[:, sample_idx]
+                vocab = vectorizer.vocabulary
+                print("> {}".format(idx2words(in_, vocab)))
+                print("= {}".format(idx2words(gold_, vocab)))
+                print("< {}".format(proba2words(out_, vocab)))
+        # print("Epoch {}, loss {}".format(epoch, epoch_loss))
