@@ -9,31 +9,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 from kovnet.vectorizer import IDVectorizer
 from kovnet.utils import sort_by_length
-from kovnet.rnn import PadRNN
+from kovnet.rnn import Decoder
 from sklearn.preprocessing import LabelEncoder
-
-
-class RNNGenerator(nn.Module):
-    def __init__(self, vocab_size, embedding_dim,
-                 hidden_dim,):
-        super(self.__class__, self).__init__()
-
-        # hyperparameters
-        num_layers = 1
-        dropout_ratio = 0
-
-        self.embedding = nn.Embedding(vocab_size, embedding_dim,
-                                      padding_idx=0)
-        self.rnn = PadRNN(embedding_dim, hidden_dim, num_layers,
-                          dropout=dropout_ratio, rnn_class=nn.GRU)
-        self.out_lin = nn.Linear(hidden_dim, vocab_size)
-
-    def forward(self, vec, lengths):
-        emb = self.embedding(vec)
-        rnn_out, rnn_hidden, rnn_out_final = self.rnn(emb, lengths)
-        out = self.out_lin(rnn_out)
-
-        return out
 
 
 def idx2words(idxes, vocab):
@@ -46,29 +23,40 @@ def proba2words(proba, vocab):
     return idx2words(idxes, vocab)
 
 
+def load_data(filename):
+    with open(filename) as f:
+        lst = []
+        for line in f:
+            text = line.strip("\n")
+            words = text.split(" ") + ["</s>"]
+            lst.append(" ".join(words))
+    return lst
+
+
 if __name__ == "__main__":
     texts = ["今日 は 寒い </s>",
              "今日 は 寒い です </s>",
              "明日 は 暑い </s>",
              ]
     num_samples = len(texts)
+    print(num_samples)
 
     vectorizer = IDVectorizer()
     vectorizer.fit(texts)
 
     # hyperparameters
-    batch_size = 2
+    batch_size = 20
     embedding_dim = 128
     hidden_dim = 128
     vocab_size = len(vectorizer.vocabulary)
-    print_every = 50
+    print_every = 1000
 
     # model
-    model = RNNGenerator(vocab_size, embedding_dim, hidden_dim)
+    model = Decoder(vocab_size, embedding_dim, hidden_dim)
     loss_function = nn.CrossEntropyLoss(ignore_index=0)
     optimizer = optim.Adam(model.parameters())
 
-    for epoch in range(1000):
+    for epoch in range(100):
         shuffled_idx = torch.randperm(num_samples)
         epoch_loss = 0
         for batch_idx in range(0, num_samples, batch_size):
