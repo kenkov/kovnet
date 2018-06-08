@@ -6,7 +6,7 @@ import torch.nn as nn
 
 
 class PadRNN(nn.Module):
-    def __init__(self, *args, rnn_class=nn.RNN, **kwargs):
+    def __init__(self, *args, rnn_class=nn.GRU, **kwargs):
         super(self.__class__, self).__init__()
 
         self.rnn = rnn_class(*args, **kwargs)
@@ -27,6 +27,8 @@ class Decoder(nn.Module):
                  num_embeddings,
                  embedding_dim,
                  hidden_size,
+                 rnn_class=nn.GRU,
+                 padding_idx=0,
                  num_layers=1,
                  dropout=0):
         super(self.__class__, self).__init__()
@@ -34,9 +36,9 @@ class Decoder(nn.Module):
         # hyperparameters
         self.embedding = nn.Embedding(num_embeddings,
                                       embedding_dim,
-                                      padding_idx=0)
+                                      padding_idx=padding_idx)
         self.rnn = PadRNN(embedding_dim, hidden_size, num_layers,
-                          dropout=dropout, rnn_class=nn.GRU)
+                          dropout=dropout, rnn_class=rnn_class)
         self.out_lin = nn.Linear(hidden_size, num_embeddings)
 
     def forward(self, vec, lengths):
