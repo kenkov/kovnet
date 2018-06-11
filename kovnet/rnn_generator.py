@@ -8,29 +8,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from kovnet.vectorizer import IDVectorizer
-from kovnet.utils import sort_by_length
 from kovnet.rnn import Decoder
+from kovnet.utils import sort_by_length
+from kovnet.utils import idx2words
+from kovnet.utils import proba2words
+from kovnet.utils import load_data
 from sklearn.preprocessing import LabelEncoder
 
-
-def idx2words(idxes, vocab):
-    id2word = {key: word for word, key in vocab.items()}
-    return [id2word[idx.item()] for idx in idxes]
-
-
-def proba2words(proba, vocab):
-    idxes = torch.topk(proba, 1, dim=1)[1]
-    return idx2words(idxes, vocab)
-
-
-def load_data(filename):
-    with open(filename) as f:
-        lst = []
-        for line in f:
-            text = line.strip("\n")
-            words = text.split(" ") + ["</s>"]
-            lst.append(" ".join(words))
-    return lst
 
 
 if __name__ == "__main__":
